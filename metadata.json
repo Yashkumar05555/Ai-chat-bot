@@ -1,0 +1,6 @@
+{
+  "name": "Cranes Varsity AI Chatbot Widget",
+  "description": "Floating AI assistant widget for Cranes Varsity with general inquiries and course-specific queries.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

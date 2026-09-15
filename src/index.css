@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+/* Subtle scrollbar for chat message lists */
+#cranes-message-list::-webkit-scrollbar,
+#cranes-course-selection-view::-webkit-scrollbar,
+#cranes-chat-home::-webkit-scrollbar {
+  width: 5px;
+}
+
+#cranes-message-list::-webkit-scrollbar-track,
+#cranes-course-selection-view::-webkit-scrollbar-track,
+#cranes-chat-home::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#cranes-message-list::-webkit-scrollbar-thumb,
+#cranes-course-selection-view::-webkit-scrollbar-thumb,
+#cranes-chat-home::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.4);
+  border-radius: 9999px;
+}
+
+#cranes-message-list::-webkit-scrollbar-thumb:hover,
+#cranes-course-selection-view::-webkit-scrollbar-thumb:hover,
+#cranes-chat-home::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.6);
+}
