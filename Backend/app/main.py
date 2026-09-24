@@ -36,3 +36,19 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.get("/health")
 async def health():
     return {"status": "ok", "connections": manager.get_connection_count()}
+
+
+def run() -> None:
+    """Start the server (so `python -m app.main` works as documented)."""
+    import uvicorn
+
+    setup_logging()
+    logger.info(
+        f"Starting server on {settings.ws_host}:{settings.ws_port} "
+        f"(ws path /ws, health /health)"
+    )
+    uvicorn.run(app, host=settings.ws_host, port=settings.ws_port)
+
+
+if __name__ == "__main__":
+    run()

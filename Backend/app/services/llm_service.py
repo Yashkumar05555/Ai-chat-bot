@@ -3,6 +3,19 @@ from app.core.config import settings
 from app.core.logging import logger
 from datetime import datetime, timezone
 import asyncio
+import re
+
+
+def strip_markdown(text: str) -> str:
+    """Remove Markdown formatting so the UI renders clean plain text."""
+    if not text:
+        return text
+    text = text.replace("**", "")                     # **bold** (incl. stray/unbalanced pairs)
+    text = re.sub(r"(?m)^\s*[*]\s+", "- ", text)      # * bullet -> - bullet
+    text = re.sub(r"\*([^*\n]+)\*", r"\1", text)      # *italic*
+    text = re.sub(r"`([^`\n]+)`", r"\1", text)         # `inline code`
+    text = re.sub(r"(?m)^\s*#{1,6}\s+", "", text)     # # headings
+    return text
 
 
 class LLMService:
@@ -16,24 +29,45 @@ class LLMService:
             self._client = genai.Client(api_key=settings.gemini_api_key)
         return self._client
 
+    def _require_api_key(self) -> None:
+        if not self._api_available or self.client is None:
+            raise RuntimeError(
+                "GEMINI_API_KEY is not configured. Set a valid key in Backend/.env."
+            )
+
     async def generate_response(
         self,
         message: str,
         mode: str = "general",
         course_id: str = None,
     ) -> dict:
+        logger.info("LLM request: question extracted (mode=%s, courseId=%s)", mode, course_id)
         try:
-            if self._api_available:
-                prompt = self._build_prompt(message, mode, course_id)
-                response = await self._call_gemini(prompt)
-                return {
-                    "answer": response,
-                    "sources": self._get_sources(mode, course_id),
-                    "timestamp": self._get_timestamp(),
-                }
-            else:
-                return self._get_mock_response(message, mode, course_id)
+            # Fail loudly when no key is configured instead of returning a
+            # fake/mock answer. The frontend must receive a real Gemini answer
+            # or a proper error (which surfaces as {type: "error"} over WS).
+            self._require_api_key()
+            prompt = self._build_prompt(message, mode, course_id)
+            logger.info(
+                "LLM request: knowledge/context retrieved (mode=%s, courseId=%s)",
+                mode,
+                course_id,
+            )
+            logger.info(
+                "LLM request: sending Gemini request (model chain=%s)",
+                settings.gemini_model_chain,
+            )
+            response_text = await self._call_gemini_with_fallback(prompt)
+            logger.info("LLM request: Gemini response received (%d chars)", len(response_text or ""))
+            return {
+                "answer": strip_markdown(response_text),
+                "sources": self._get_sources(mode, course_id),
+                "timestamp": self._get_timestamp(),
+            }
+        except RuntimeError:
+            raise
         except Exception as e:
+            # Never log the API key.
             logger.error(f"LLM generation error: {e}")
             raise RuntimeError(f"Failed to generate AI response: {str(e)}")
 
@@ -62,16 +96,73 @@ class LLMService:
         }
         return course_data.get(course_id, "General course information.")
 
-    async def _call_gemini(self, prompt: str) -> str:
-        loop = asyncio.get_event_loop()
+    async def _call_gemini_with_fallback(self, prompt: str) -> str:
+        """Try each configured model in order; fall back on quota/overload errors.
+
+        Different Gemini models have independent free-tier quotas. The
+        previously hardcoded `gemini-3.6-flash` frequently returns 429
+        (20 req/day quota exhausted) or 503 (high demand), which surfaced in
+        the frontend as the generic connectivity error. Falling back to the
+        next model gives the request another independent quota bucket.
+        """
+        last_error: Exception | None = None
+        for model in settings.gemini_model_chain:
+            try:
+                logger.info("LLM request: trying Gemini model=%s", model)
+                text = await self._call_gemini(prompt, model)
+                if not text or not text.strip():
+                    raise RuntimeError(f"Gemini model {model} returned an empty response")
+                logger.info("LLM request: Gemini model succeeded model=%s", model)
+                return text
+            except Exception as e:
+                last_error = e
+                if self._is_retryable_gemini_error(e):
+                    logger.warning("LLM request: model %s unavailable (%s); trying fallback", model, str(e)[:200])
+                    continue
+                raise
+        raise RuntimeError(f"All Gemini models unavailable. Last error: {last_error}")
+
+    @staticmethod
+    def _is_retryable_gemini_error(e: Exception) -> bool:
+        msg = str(e)
+        code = getattr(e, "code", None)
+        if code in (429, 503):
+            return True
+        for token in ("429", "503", "RESOURCE_EXHAUSTED", "UNAVAILABLE", "overloaded", "high demand", "quota"):
+            if token.lower() in msg.lower():
+                return True
+        return False
+
+    async def _call_gemini(self, prompt: str, model: str) -> str:
+        loop = asyncio.get_running_loop()
         response = await loop.run_in_executor(
             None,
             lambda: self.client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=[{"role": "user", "parts": [prompt]}],
+                model=model,
+                contents=prompt,
             ),
         )
-        return response.candidates[0].content.parts[0].text
+        return self._extract_response_text(response)
+
+    @staticmethod
+    def _extract_response_text(response) -> str:
+        # Preferred SDK accessor.
+        text = getattr(response, "text", None)
+        if isinstance(text, str) and text.strip():
+            return text
+        # Fallback to the raw candidates structure.
+        try:
+            candidates = getattr(response, "candidates", None) or []
+            if candidates:
+                content = getattr(candidates[0], "content", None)
+                parts = getattr(content, "parts", None) or []
+                if parts:
+                    part_text = getattr(parts[0], "text", None)
+                    if isinstance(part_text, str) and part_text.strip():
+                        return part_text
+        except Exception:
+            pass
+        raise RuntimeError("Gemini returned no text (empty candidates/parts)")
 
     def _get_sources(self, mode: str, course_id: str) -> list[str]:
         if mode == "course":
@@ -80,10 +171,3 @@ class LLMService:
 
     def _get_timestamp(self) -> str:
         return datetime.now(timezone.utc).isoformat()
-
-    def _get_mock_response(self, message: str, mode: str, course_id: str) -> dict:
-        return {
-            "answer": f"Response to: {message} (mode: {mode}, course: {course_id}). [Mock mode - set GEMINI_API_KEY for real AI responses]",
-            "sources": self._get_sources(mode, course_id),
-            "timestamp": self._get_timestamp(),
-        }

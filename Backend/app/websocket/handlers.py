@@ -57,12 +57,20 @@ async def _handle_messages(client_id: str, websocket: WebSocket):
 
 
 async def _handle_chat(client_id: str, message: dict):
+    raw_text = message.get("message", "")
+    mode = message.get("mode", "general")
+    logger.info(
+        "WS chat received (client=%s, mode=%s, chars=%d)",
+        client_id,
+        mode,
+        len(raw_text or ""),
+    )
     try:
         await manager.send_message(client_id, {"type": "typing", "isTyping": True})
 
         response = await chat_service.process_message(
-            message=message.get("message", ""),
-            mode=message.get("mode", "general"),
+            message=raw_text,
+            mode=mode,
             course_id=message.get("courseId"),
             session_id=message.get("sessionId", "session_default"),
         )
@@ -73,6 +81,16 @@ async def _handle_chat(client_id: str, message: dict):
             "answer": response["answer"],
             "sources": response["sources"],
             "timestamp": response["timestamp"],
+        })
+        logger.info("WS chat answered (client=%s)", client_id)
+    except ValueError as e:
+        # Client-caused error (empty message, invalid mode, ...): proper
+        # error frame so the frontend can surface it instead of hanging.
+        logger.warning(f"WS chat validation error for {client_id}: {e}")
+        await manager.send_message(client_id, {"type": "typing", "isTyping": False})
+        await manager.send_message(client_id, {
+            "type": "error",
+            "error": str(e)
         })
     except Exception as e:
         logger.error(f"Chat error for {client_id}: {e}")
