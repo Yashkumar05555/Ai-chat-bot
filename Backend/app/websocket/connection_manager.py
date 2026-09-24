@@ -2,6 +2,7 @@ import asyncio
 import json
 from typing import Set, Dict
 from fastapi import WebSocket, WebSocketDisconnect
+from starlette.websockets import WebSocketState
 from app.core.logging import logger
 
 
@@ -21,7 +22,7 @@ class ConnectionManager:
 
     async def send_message(self, client_id: str, data: dict) -> None:
         websocket = self.active_connections.get(client_id)
-        if websocket and not websocket.client_closed:
+        if websocket and websocket.client_state != WebSocketState.DISCONNECTED:
             try:
                 await websocket.send_json(data)
             except Exception as e:
@@ -32,7 +33,7 @@ class ConnectionManager:
         disconnected = []
         for client_id, websocket in self.active_connections.items():
             try:
-                if not websocket.client_closed:
+                if websocket.client_state != WebSocketState.DISCONNECTED:
                     await websocket.send_json(data)
             except Exception as e:
                 logger.error(f"Broadcast error to {client_id}: {e}")
@@ -44,7 +45,10 @@ class ConnectionManager:
         return len(self.active_connections)
 
     def is_connected(self, client_id: str) -> bool:
-        return client_id in self.active_connections and not self.active_connections[client_id].client_closed
+        websocket = self.active_connections.get(client_id)
+        return bool(
+            websocket and websocket.client_state != WebSocketState.DISCONNECTED
+        )
 
 
 manager = ConnectionManager()
