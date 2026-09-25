@@ -1,23 +1,24 @@
 import React from "react";
 import {
   MessageSquare,
-  GraduationCap,
   ChevronRight,
   Sparkles,
   Building2,
-  Award,
   Zap,
-  History
+  History,
+  GraduationCap
 } from "lucide-react";
+import { COURSES } from "../data/courses.js";
 
 /**
  * ChatHome - Primary navigation hub when chatbot opens.
  * Features modern light & night theme styling with high-contrast typography,
- * quick suggestion chips, and clear visual hierarchy.
+ * course-wise chat selector, and clear visual hierarchy.
  */
 export default function ChatHome({
   onSelectGeneral,
   onSelectCourses,
+  onSelectCourse,
   onSelectHistory,
   theme = "light"
 }) {
@@ -182,24 +183,33 @@ export default function ChatHome({
             </div>
           </button>
 
-          {/* Card 2: Course Specific Query */}
-          <button
+          {/* Card 2: Course Wise Chat & Curriculum */}
+          <div
             id="cranes-card-course-query"
-            type="button"
-            onClick={onSelectCourses}
-            className={`group w-full text-left p-4 rounded-2xl border shadow-xs hover:shadow-md transition-all duration-200 flex flex-col gap-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+            className={`group w-full text-left p-4 rounded-2xl border shadow-xs hover:shadow-md transition-all duration-200 flex flex-col gap-3 ${
               isDark
-                ? "bg-slate-800/90 hover:bg-slate-800 border-slate-700 hover:border-indigo-500"
-                : "bg-white hover:bg-slate-50/80 active:bg-indigo-50/50 border-slate-200 hover:border-indigo-300"
+                ? "bg-slate-800/90 border-slate-700 hover:border-purple-500"
+                : "bg-white border-slate-200 hover:border-purple-300"
             }`}
           >
-            <div className="flex items-center justify-between gap-3 w-full">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={onSelectCourses}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelectCourses?.();
+                }
+              }}
+              className="flex items-center justify-between gap-3 w-full cursor-pointer focus:outline-none"
+            >
               <div className="flex items-center gap-3 min-w-0">
                 <div
                   className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-all duration-200 shadow-xs border ${
                     isDark
-                      ? "bg-indigo-950/60 border-indigo-800 text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white"
-                      : "bg-indigo-50 border-indigo-200/50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white"
+                      ? "bg-purple-950/60 border-purple-800 text-purple-400 group-hover:bg-purple-600 group-hover:text-white"
+                      : "bg-purple-50 border-purple-200/50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white"
                   }`}
                 >
                   <GraduationCap className="w-5 h-5" />
@@ -208,31 +218,31 @@ export default function ChatHome({
                   <div className="flex items-center gap-1.5">
                     <span
                       className={`text-sm font-bold transition-colors ${
-                        isDark ? "text-white group-hover:text-indigo-400" : "text-slate-900 group-hover:text-indigo-600"
+                        isDark ? "text-white group-hover:text-purple-400" : "text-slate-900 group-hover:text-purple-600"
                       }`}
                     >
-                      Course Specific Curriculum
+                      Course-Wise Chat & Curriculum
                     </span>
                     <span
                       className={`text-[9px] px-1.5 py-0.2 rounded font-semibold border ${
                         isDark
-                          ? "bg-indigo-950/80 text-indigo-300 border-indigo-800"
-                          : "bg-indigo-50 text-indigo-700 border-indigo-100"
+                          ? "bg-purple-950/80 text-purple-300 border-purple-800"
+                          : "bg-purple-50 text-purple-700 border-purple-100"
                       }`}
                     >
-                      6 Specializations
+                      Curriculum
                     </span>
                   </div>
                   <p className={`text-xs line-clamp-1 mt-0.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                    VLSI Design, Embedded Systems, AI & Data Science, IoT, Java.
+                    Ask specific questions about syllabus, lab tools & careers.
                   </p>
                 </div>
               </div>
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${
                   isDark
-                    ? "bg-slate-700 text-slate-400 group-hover:bg-indigo-600 group-hover:text-white"
-                    : "bg-slate-100 text-slate-400 group-hover:bg-indigo-600 group-hover:text-white"
+                    ? "bg-slate-700 text-slate-400 group-hover:bg-purple-600 group-hover:text-white"
+                    : "bg-slate-100 text-slate-400 group-hover:bg-purple-600 group-hover:text-white"
                 }`}
               >
                 <ChevronRight className="w-4 h-4" />
@@ -241,36 +251,37 @@ export default function ChatHome({
 
             {/* Quick Course Tags */}
             <div
-              className={`flex items-center flex-wrap gap-1.5 pt-1 border-t ${
+              className={`flex items-center flex-wrap gap-1.5 pt-2 border-t ${
                 isDark ? "border-slate-700/60" : "border-slate-100"
               }`}
             >
-              <span className={`text-[10px] font-medium ${isDark ? "text-slate-400" : "text-slate-400"}`}>
-                Tracks:
+              <span className={`text-[10px] font-medium mr-0.5 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                Courses:
               </span>
-              <span
-                className={`text-[10px] px-2 py-0.5 rounded-md font-medium ${
-                  isDark ? "bg-indigo-950/80 text-indigo-300" : "bg-indigo-50 text-indigo-700"
-                }`}
-              >
-                Embedded & Automotive
-              </span>
-              <span
-                className={`text-[10px] px-2 py-0.5 rounded-md font-medium ${
-                  isDark ? "bg-indigo-950/80 text-indigo-300" : "bg-indigo-50 text-indigo-700"
-                }`}
-              >
-                VLSI Verification
-              </span>
-              <span
-                className={`text-[10px] px-2 py-0.5 rounded-md font-medium ${
-                  isDark ? "bg-indigo-950/80 text-indigo-300" : "bg-indigo-50 text-indigo-700"
-                }`}
-              >
-                Data Science & AI
-              </span>
+              {COURSES.map((course) => (
+                <button
+                  key={course.id}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onSelectCourse) {
+                      onSelectCourse(course);
+                    } else if (onSelectCourses) {
+                      onSelectCourses();
+                    }
+                  }}
+                  className={`text-[10px] font-medium px-2 py-0.5 rounded-md transition-colors border ${
+                    isDark
+                      ? "bg-slate-700/90 hover:bg-purple-900/60 hover:border-purple-600 text-slate-200 hover:text-white border-slate-600"
+                      : "bg-slate-100 hover:bg-purple-50 hover:border-purple-300 text-slate-700 hover:text-purple-700 border-slate-200"
+                  }`}
+                  title={`Start chat for ${course.name}`}
+                >
+                  {course.name}
+                </button>
+              ))}
             </div>
-          </button>
+          </div>
 
           {/* History Shortcut Card */}
           {onSelectHistory && (
@@ -303,40 +314,6 @@ export default function ChatHome({
               <ChevronRight className="w-4 h-4 text-slate-400" />
             </button>
           )}
-
-          {/* Card 3: Scholarship Test Callout */}
-          <div
-            className={`rounded-2xl p-3.5 border flex items-center justify-between gap-3 ${
-              isDark
-                ? "bg-gradient-to-r from-amber-950/30 via-amber-950/10 to-transparent border-amber-900/60"
-                : "bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-amber-200/80"
-            }`}
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
-                <Award className="w-4 h-4" />
-              </div>
-              <div className="min-w-0">
-                <h5 className={`text-xs font-bold truncate ${isDark ? "text-amber-300" : "text-slate-900"}`}>
-                  National Scholarship Test 2026 (CST)
-                </h5>
-                <p className={`text-[11px] truncate ${isDark ? "text-slate-400" : "text-slate-600"}`}>
-                  Up to 100% tuition waiver for meritorious engineers.
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={onSelectGeneral}
-              className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-colors shrink-0 ${
-                isDark
-                  ? "text-amber-200 bg-amber-950/80 hover:bg-amber-900 border border-amber-800"
-                  : "text-amber-800 bg-amber-100 hover:bg-amber-200"
-              }`}
-            >
-              Learn More
-            </button>
-          </div>
         </div>
       </div>
 

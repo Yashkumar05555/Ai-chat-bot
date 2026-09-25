@@ -156,6 +156,7 @@ export default function ChatWindow({ isOpen, onClose }) {
               theme={theme}
               onSelectGeneral={handleSelectGeneral}
               onSelectCourses={handleSelectCourses}
+              onSelectCourse={handleSelectCourse}
               onSelectHistory={() => setCurrentView("history")}
             />
           )}

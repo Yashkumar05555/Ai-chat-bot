@@ -2,15 +2,68 @@ import React, { useState } from "react";
 import { Bot, User, Check, Copy, Sparkles, CheckCircle2 } from "lucide-react";
 
 /**
+ * Parses inline formatting such as **bold** or *emphasis*.
+ */
+function formatInlineText(text, isDark, isUser) {
+  if (!text) return "";
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      return (
+        <strong
+          key={i}
+          className={`font-bold ${
+            isUser ? "text-white" : isDark ? "text-white" : "text-slate-900"
+          }`}
+        >
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith("*") && part.endsWith("*") && part.length > 2) {
+      return (
+        <em
+          key={i}
+          className={`font-semibold not-italic ${
+            isUser ? "text-white" : isDark ? "text-white" : "text-slate-900"
+          }`}
+        >
+          {part.slice(1, -1)}
+        </em>
+      );
+    }
+    return part;
+  });
+}
+
+/**
  * Formats message text: handles bullet lines starting with • or -, bold text (**text**), and line breaks.
  */
-function renderFormattedContent(text) {
+function renderFormattedContent(text, isDark, isUser) {
   if (!text) return null;
 
   const lines = text.split("\n");
 
+  const textColor = isUser
+    ? "text-white"
+    : isDark
+    ? "text-slate-100"
+    : "text-slate-800";
+
+  const bulletTextColor = isUser
+    ? "text-white"
+    : isDark
+    ? "text-slate-200"
+    : "text-slate-700";
+
+  const bulletDotColor = isUser
+    ? "bg-white/90"
+    : isDark
+    ? "bg-blue-400"
+    : "bg-blue-600";
+
   return (
-    <div className="space-y-1.5 text-xs leading-relaxed">
+    <div className={`space-y-1.5 text-xs leading-relaxed ${textColor}`}>
       {lines.map((line, idx) => {
         const trimmed = line.trim();
         if (!trimmed) {
@@ -22,13 +75,19 @@ function renderFormattedContent(text) {
           const content = trimmed.replace(/^[•-]\s*/, "");
           return (
             <div key={idx} className="flex items-start gap-2 pl-1 my-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 shrink-0"></span>
-              <span className="text-slate-700">{content}</span>
+              <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${bulletDotColor}`}></span>
+              <span className={bulletTextColor}>
+                {formatInlineText(content, isDark, isUser)}
+              </span>
             </div>
           );
         }
 
-        return <p key={idx} className="text-slate-800">{line}</p>;
+        return (
+          <p key={idx} className={textColor}>
+            {formatInlineText(line, isDark, isUser)}
+          </p>
+        );
       })}
     </div>
   );
@@ -95,7 +154,7 @@ export default function MessageBubble({ message, theme = "light" }) {
           }`}
         >
           {/* Message text */}
-          {renderFormattedContent(message.text)}
+          {renderFormattedContent(message.text, isDark, isUser)}
 
           {/* Sources preview if returned by bot */}
           {!isUser && message.sources && message.sources.length > 0 && (
@@ -104,7 +163,7 @@ export default function MessageBubble({ message, theme = "light" }) {
                 isDark ? "border-slate-700/80" : "border-slate-100"
               }`}
             >
-              <span className={`text-[10px] font-medium ${isDark ? "text-slate-400" : "text-slate-400"}`}>
+              <span className={`text-[10px] font-medium ${isDark ? "text-slate-300" : "text-slate-500"}`}>
                 Verified by:
               </span>
               {message.sources.map((src, i) => (
@@ -112,7 +171,7 @@ export default function MessageBubble({ message, theme = "light" }) {
                   key={i}
                   className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${
                     isDark
-                      ? "bg-slate-700 text-slate-200 border-slate-600"
+                      ? "bg-slate-700 text-blue-200 border-slate-600"
                       : "bg-slate-100 text-slate-600 border-slate-200/60"
                   }`}
                 >
@@ -126,12 +185,12 @@ export default function MessageBubble({ message, theme = "light" }) {
           {!isUser && (
             <div
               className={`mt-2 pt-1 flex items-center justify-between text-[10px] ${
-                isDark ? "text-slate-400" : "text-slate-400"
+                isDark ? "text-slate-300" : "text-slate-500"
               }`}
             >
               <span className="text-[10px] flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                <span>Cranes CRM Verified</span>
+                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                <span className={isDark ? "text-slate-300" : "text-slate-500"}>Cranes CRM Verified</span>
               </span>
               <button
                 type="button"
@@ -139,14 +198,14 @@ export default function MessageBubble({ message, theme = "light" }) {
                 title="Copy response"
                 className={`opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 p-1 -mr-1 rounded ${
                   isDark
-                    ? "text-slate-400 hover:text-blue-400 hover:bg-slate-700/50"
+                    ? "text-slate-300 hover:text-white hover:bg-slate-700/50"
                     : "text-slate-400 hover:text-blue-600 hover:bg-slate-50"
                 }`}
               >
                 {copied ? (
                   <>
-                    <Check className="w-3 h-3 text-emerald-500" />
-                    <span className="text-[10px] text-emerald-500 font-medium">Copied</span>
+                    <Check className="w-3 h-3 text-emerald-400" />
+                    <span className="text-[10px] text-emerald-400 font-medium">Copied</span>
                   </>
                 ) : (
                   <>
@@ -163,7 +222,7 @@ export default function MessageBubble({ message, theme = "light" }) {
         {formattedTime && (
           <span
             className={`text-[10px] mt-1 px-1 ${
-              isDark ? "text-slate-500" : "text-slate-400"
+              isDark ? "text-slate-400" : "text-slate-500"
             }`}
           >
             {formattedTime}
